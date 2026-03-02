@@ -1,0 +1,41 @@
+# Secret keys - NEVER commit the real key file
+key.env
+
+# One-time setup script (contains token — delete after use)
+github_setup.ps1
+
+# SQLite database (contains your personal data)
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Cowork / Claude editor settings
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
