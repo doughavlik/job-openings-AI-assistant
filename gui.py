@@ -5,9 +5,9 @@ Layout
 Window
  ├─ Toolbar   (Import PDF | Add Row | [search box] | Show Archived toggle)
  ├─ Job Table (inline-editable, sortable)
- └─ Detail Pane (collapsible splitter; Resume tab | Job Description tab)
+ └─ Detail Pane (collapsible splitter; Resume tab | Job Description tab | People tab)
 
-Columns: ID · Company · Job Title · JD · Resume · Application URL · Created · Actions
+Columns: ID · Company · Job Title · JD · Resume · People · Application URL · Created · Actions
 """
 
 import sys
@@ -37,12 +37,13 @@ COL_COMPANY  = 1
 COL_TITLE    = 2
 COL_JD       = 3
 COL_RESUME   = 4
-COL_URL      = 5
-COL_CREATED  = 6
-COL_ACTIONS  = 7
-NUM_COLS     = 8
+COL_PEOPLE   = 5
+COL_URL      = 6
+COL_CREATED  = 7
+COL_ACTIONS  = 8
+NUM_COLS     = 9
 
-COL_HEADERS = ["ID", "Company", "Job Title", "JD", "Resume", "Application URL", "Created", "Actions"]
+COL_HEADERS = ["ID", "Company", "Job Title", "JD", "Resume", "People", "Application URL", "Created", "Actions"]
 
 # Columns that hold real text the user can edit
 EDITABLE_COLS = {COL_COMPANY, COL_TITLE, COL_URL}
@@ -112,7 +113,7 @@ class TableDelegate(QStyledItemDelegate):
     def initStyleOption(self, option: QStyleOptionViewItem, index):
         super().initStyleOption(option, index)
         col = index.column()
-        if col in (COL_JD, COL_RESUME):
+        if col in (COL_JD, COL_RESUME, COL_PEOPLE):
             option.displayAlignment = Qt.AlignmentFlag.AlignCenter
 
     def createEditor(self, parent, option, index):
@@ -231,6 +232,7 @@ class MainWindow(QMainWindow):
         hh.setSectionResizeMode(COL_TITLE,    QHeaderView.ResizeMode.Interactive)
         hh.setSectionResizeMode(COL_JD,       QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(COL_RESUME,   QHeaderView.ResizeMode.ResizeToContents)
+        hh.setSectionResizeMode(COL_PEOPLE,   QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(COL_URL,      QHeaderView.ResizeMode.Stretch)
         hh.setSectionResizeMode(COL_CREATED,  QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(COL_ACTIONS,  QHeaderView.ResizeMode.ResizeToContents)
@@ -263,8 +265,49 @@ class MainWindow(QMainWindow):
             self._jd_save_btn, self._jd_cancel_btn = self._build_detail_tab()
         self._tabs.addTab(jd_widget, "Job Description")
 
+        # People tab
+        self._tabs.addTab(self._build_people_tab(), "People")
+
         layout.addWidget(self._tabs)
         return frame
+
+    def _build_people_tab(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 4, 0, 0)
+        layout.setSpacing(4)
+
+        # Toolbar row: Add Person button
+        btn_row = QHBoxLayout()
+        add_btn = QPushButton("＋ Add Person")
+        add_btn.setToolTip("Add a new person to this job opening")
+        add_btn.clicked.connect(self._on_add_person)
+        btn_row.addWidget(add_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        # People table
+        self._people_model = QStandardItemModel(0, 4)
+        self._people_model.setHorizontalHeaderLabels(["Name", "Title", "Details", "Actions"])
+        self._people_model.itemChanged.connect(self._on_person_item_changed)
+
+        self._people_table = QTableView()
+        self._people_table.setModel(self._people_model)
+        self._people_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._people_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._people_table.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked |
+                                           QAbstractItemView.EditTrigger.SelectedClicked)
+        self._people_table.verticalHeader().setVisible(False)
+        self._people_table.setAlternatingRowColors(True)
+
+        ph = self._people_table.horizontalHeader()
+        ph.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)   # Name
+        ph.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)   # Title
+        ph.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)       # Details
+        ph.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Actions
+
+        layout.addWidget(self._people_table)
+        return widget
 
     def _build_detail_tab(self):
         """Return (widget, text_edit, edit_btn, save_btn, cancel_btn)."""
@@ -329,13 +372,13 @@ class MainWindow(QMainWindow):
             ).fetchall()
 
         for row in rows:
-            self._append_row(row)
+            self._append_row(row, db.job_has_people(row["id"]))
 
         self._model.itemChanged.connect(self._on_item_changed)
         self._place_archive_buttons()
         self._on_filter_changed()
 
-    def _append_row(self, row):
+    def _append_row(self, row, has_people: bool = False):
         job_id    = row["id"]
         archived  = bool(row["archived"])
         has_jd    = bool(row["job_description_contents"])
@@ -357,8 +400,9 @@ class MainWindow(QMainWindow):
             id_item,
             item(row["customer_name"], editable=not archived),
             item(row["job_title"],     editable=not archived),
-            item(DOT_FULL if has_jd  else DOT_EMPTY),
-            item(DOT_FULL if has_res else DOT_EMPTY),
+            item(DOT_FULL if has_jd     else DOT_EMPTY),
+            item(DOT_FULL if has_res    else DOT_EMPTY),
+            item(DOT_FULL if has_people else DOT_EMPTY),
             item(row["application_url"], editable=not archived),
             item(created),
             item(""),  # Actions column — button set via setIndexWidget below
@@ -369,6 +413,7 @@ class MainWindow(QMainWindow):
         # Center the dot columns
         items[COL_JD].setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         items[COL_RESUME].setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        items[COL_PEOPLE].setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._model.appendRow(items)
         model_row = self._model.rowCount() - 1
@@ -527,6 +572,7 @@ class MainWindow(QMainWindow):
 
         self._resume_text.setPlainText(row["teal_import_raw"] or "")
         self._jd_text.setPlainText(row["job_description_contents"] or "")
+        self._refresh_people_tab(job_id)
 
         # Reset both tabs to read-only
         for text, edit_btn, save_btn, cancel_btn in [
@@ -586,19 +632,104 @@ class MainWindow(QMainWindow):
         self._update_row_indicators(job_id)
 
     def _update_row_indicators(self, job_id: int):
-        """Refresh the JD/Resume dot columns for a given job_id after a save."""
+        """Refresh the JD/Resume/People dot columns for a given job_id after a save."""
         row = db.get_job(job_id)
         if row is None:
             return
-        has_jd  = bool(row["job_description_contents"])
-        has_res = bool(row["teal_import_raw"])
+        has_jd     = bool(row["job_description_contents"])
+        has_res    = bool(row["teal_import_raw"])
+        has_people = db.job_has_people(job_id)
         for source_row in range(self._model.rowCount()):
             if self._model.item(source_row, COL_ID).data(Qt.ItemDataRole.UserRole) == job_id:
                 self._model.itemChanged.disconnect(self._on_item_changed)
                 self._model.item(source_row, COL_JD).setText(DOT_FULL if has_jd else DOT_EMPTY)
                 self._model.item(source_row, COL_RESUME).setText(DOT_FULL if has_res else DOT_EMPTY)
+                self._model.item(source_row, COL_PEOPLE).setText(DOT_FULL if has_people else DOT_EMPTY)
                 self._model.itemChanged.connect(self._on_item_changed)
                 break
+
+    # ------------------------------------------------------------------
+    # People tab
+    # ------------------------------------------------------------------
+
+    def _refresh_people_tab(self, job_id: int):
+        """Reload the people table for the given job opening."""
+        self._people_model.itemChanged.disconnect(self._on_person_item_changed)
+        self._people_model.setRowCount(0)
+        self._current_job_id = job_id
+
+        for person in db.get_people_for_job(job_id):
+            self._append_person_row(person, job_id)
+
+        self._people_model.itemChanged.connect(self._on_person_item_changed)
+
+    def _append_person_row(self, person, job_id: int):
+        def cell(text, editable=True):
+            it = QStandardItem(text or "")
+            it.setEditable(editable)
+            return it
+
+        person_id = person["id"]
+        name_item = cell(person["name"])
+        name_item.setData(person_id, Qt.ItemDataRole.UserRole)  # store person_id
+
+        items = [
+            name_item,
+            cell(person["title"]),
+            cell(person["details"]),
+            cell("", editable=False),  # Actions — button placed below
+        ]
+        self._people_model.appendRow(items)
+        model_row = self._people_model.rowCount() - 1
+
+        btn = QPushButton("Remove")
+        btn.setToolTip("Unlink this person from the job opening")
+        btn.setFixedWidth(65)
+        btn.setFlat(True)
+        btn.setStyleSheet(
+            "QPushButton { color: #888; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; padding: 2px 4px; }"
+            "QPushButton:hover { color: #c00; border-color: #c00; }"
+        )
+        btn.clicked.connect(lambda checked=False, jid=job_id, pid=person_id: self._on_remove_person(jid, pid))
+        self._people_table.setIndexWidget(self._people_model.index(model_row, 3), btn)
+
+    def _on_add_person(self):
+        job_id = getattr(self, "_current_job_id", None)
+        if job_id is None:
+            return
+        person_id = db.insert_person(job_id)
+        self._refresh_people_tab(job_id)
+        self._update_row_indicators(job_id)
+        # Put the Name cell of the new row into edit mode
+        new_row = self._people_model.rowCount() - 1
+        if new_row >= 0:
+            idx = self._people_model.index(new_row, 0)
+            self._people_table.setCurrentIndex(idx)
+            self._people_table.edit(idx)
+
+    def _on_remove_person(self, job_id: int, person_id: int):
+        reply = QMessageBox.question(
+            self,
+            "Remove person?",
+            "Remove this person from the job opening?\n\nThey will not be deleted from the database.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            db.unlink_person(job_id, person_id)
+            self._refresh_people_tab(job_id)
+            self._update_row_indicators(job_id)
+
+    def _on_person_item_changed(self, item: QStandardItem):
+        col = item.column()
+        col_to_field = {0: "name", 1: "title", 2: "details"}
+        if col not in col_to_field:
+            return
+        # person_id is stored on the Name cell (column 0)
+        name_item = self._people_model.item(item.row(), 0)
+        person_id = name_item.data(Qt.ItemDataRole.UserRole)
+        if person_id is None:
+            return
+        db.update_person(person_id, **{col_to_field[col]: item.text().strip() or None})
 
 
 # ---------------------------------------------------------------------------
