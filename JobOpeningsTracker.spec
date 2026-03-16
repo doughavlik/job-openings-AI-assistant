@@ -5,11 +5,21 @@ Build with:
     pip install pyinstaller
     pyinstaller JobOpeningsTracker.spec
 
-Output goes to dist/JobOpeningsTracker/ — zip that folder for distribution.
+Output goes to %LOCALAPPDATA%\JobOpeningsTracker-builds\JobOpeningsTracker\
+That folder is outside OneDrive so rebuilds never cause sync conflicts.
+Zip that folder and upload to the GitHub Release for distribution.
 """
 
 import os
 from pathlib import Path
+
+# ── Build output location ────────────────────────────────────────────────────
+# Use %LOCALAPPDATA% (C:\Users\<you>\AppData\Local) so the dist folder is
+# never inside OneDrive.  This prevents OneDrive from creating conflict copies
+# when you rebuild and overwrite the exe.
+_local_app_data = Path(os.environ.get("LOCALAPPDATA", "C:\\Temp"))
+_dist_path = str(_local_app_data / "JobOpeningsTracker-builds")
+_work_path = str(_local_app_data / "JobOpeningsTracker-builds" / "build")
 
 block_cipher = None
 
@@ -18,12 +28,26 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        # Ship the seed config.db so defaults are available
+        # Ship the seed config.db so action defaults are available on first run
         ('config.db', '.'),
     ],
     hiddenimports=[
+        # Google Generative AI SDK
         'google.genai',
         'google.genai.types',
+        # pdfplumber + its pdfminer.six backend (not always auto-detected)
+        'pdfplumber',
+        'pdfminer',
+        'pdfminer.high_level',
+        'pdfminer.layout',
+        'pdfminer.pdfinterp',
+        'pdfminer.pdfdevice',
+        'pdfminer.converter',
+        'pdfminer.pdfpage',
+        'pdfminer.pdfdocument',
+        'pdfminer.pdfparser',
+        'pdfminer.pdftypes',
+        'pdfminer.utils',
     ],
     hookspath=[],
     hooksconfig={},
@@ -44,7 +68,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,   # windowed app, no console
+    console=False,   # windowed — no console window for end users
     icon=None,       # add an .ico path here if you want a custom icon
 )
 
