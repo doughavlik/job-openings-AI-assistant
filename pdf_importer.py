@@ -12,7 +12,24 @@ from pathlib import Path
 
 import db
 
-_KEY_FILE = Path(__file__).parent / "key.env"
+
+def _user_data_dir() -> Path:
+    """Return the platform-appropriate user data directory."""
+    import sys
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    d = base / "JobOpeningsTracker"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _key_file_path() -> Path:
+    """Return the path to the key file in the user data folder."""
+    return _user_data_dir() / "gemini_api_key.txt"
 
 
 def _load_api_key() -> str:
@@ -20,16 +37,29 @@ def _load_api_key() -> str:
 
     Checks, in order:
       1. GEMINI_API_KEY environment variable
-      2. key.env file in the project directory (single line: your_key_here)
+      2. gemini_api_key.txt in the user data folder
+      3. key.env in the app directory (legacy location)
     """
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if key:
         return key
-    if _KEY_FILE.exists():
-        key = _KEY_FILE.read_text(encoding="utf-8").strip()
+    key_file = _key_file_path()
+    if key_file.exists():
+        key = key_file.read_text(encoding="utf-8").strip()
+        if key and not key.startswith("#"):
+            return key
+    # Legacy fallback: key.env in app directory
+    legacy = Path(__file__).parent / "key.env"
+    if legacy.exists():
+        key = legacy.read_text(encoding="utf-8").strip()
         if key and not key.startswith("#"):
             return key
     return ""
+
+
+def save_api_key(key: str) -> None:
+    """Save the Gemini API key to the user data folder."""
+    _key_file_path().write_text(key.strip(), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

@@ -43,19 +43,19 @@ def assemble_prompt(
     if action["use_company"]:
         company = (job["customer_name"] or "").strip()
         if company:
-            parts.append(f"## Company\n{company}")
+            parts.append(f"# Company\n{company}")
 
     # Job description
     if action["use_job_desc"]:
         jd = (job["job_description_contents"] or "").strip()
         if jd:
-            parts.append(f"## Job Description\n{jd}")
+            parts.append(f"# Job Description\n{jd}")
 
     # Resume
     if action["use_resume"]:
         resume = (job["teal_import_raw"] or "").strip()
         if resume:
-            parts.append(f"## Resume\n{resume}")
+            parts.append(f"# Resume\n{resume}")
 
     # Person
     if action["use_person"] and person is not None:
@@ -67,11 +67,11 @@ def assemble_prompt(
         if person["details"]:
             person_parts.append(person["details"].strip())
         if person_parts:
-            parts.append("## Interviewer / Contact\n" + "\n".join(person_parts))
+            parts.append("# Interviewer / Contact\n" + "\n".join(person_parts))
 
     # ---- 3. Additional context / question text --------------------------
     extra = (additional_context or "").strip()
     if extra:
-        parts.append(f"## Additional Context\n{extra}")
+        parts.append(f"# Additional Context\n{extra}")
 
     return "\n\n---\n\n".join(parts)

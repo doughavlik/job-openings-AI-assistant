@@ -23,7 +23,11 @@ from datetime import datetime, timezone
 # ---------------------------------------------------------------------------
 
 # Seed file: ships with the app, committed to git.
-SEED_DB_PATH = Path(__file__).parent / "config.db"
+# When running from a PyInstaller bundle, __file__ is inside a temp folder;
+# sys._MEIPASS points to the bundle directory where data files live.
+import sys as _sys
+_APP_DIR = Path(getattr(_sys, '_MEIPASS', Path(__file__).parent))
+SEED_DB_PATH = _APP_DIR / "config.db"
 
 def _user_data_dir() -> Path:
     """Return the platform-appropriate user data directory."""

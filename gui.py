@@ -145,6 +145,93 @@ class ArchiveButton(QPushButton):
 
 
 # ---------------------------------------------------------------------------
+# First-run API key setup dialog
+# ---------------------------------------------------------------------------
+
+class ApiKeyDialog(QDialog):
+    """Shown on first run (or via menu) when no Gemini API key is configured."""
+
+    def __init__(self, parent=None, first_run: bool = True):
+        super().__init__(parent)
+        self.setWindowTitle("Gemini API Key Setup")
+        self.resize(520, 280)
+        self._build_ui(first_run)
+
+    def _build_ui(self, first_run: bool):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.setContentsMargins(16, 16, 16, 16)
+
+        if first_run:
+            welcome = QLabel(
+                "<b>Welcome to Job Openings Tracker!</b><br><br>"
+                "To import PDF resumes, this app uses Google's Gemini AI. "
+                "You'll need a free API key from Google AI Studio.<br><br>"
+                "<b>Steps:</b><br>"
+                "1. Visit <a href='https://aistudio.google.com/apikey'>https://aistudio.google.com/apikey</a><br>"
+                "2. Click \"Create API key\" and copy it<br>"
+                "3. Paste it below"
+            )
+        else:
+            welcome = QLabel(
+                "<b>Gemini API Key</b><br><br>"
+                "Enter or update your Google Gemini API key below.<br>"
+                "Get a free key at <a href='https://aistudio.google.com/apikey'>https://aistudio.google.com/apikey</a>"
+            )
+        welcome.setOpenExternalLinks(True)
+        welcome.setWordWrap(True)
+        layout.addWidget(welcome)
+
+        layout.addWidget(QLabel("API Key:"))
+        self._key_input = QLineEdit()
+        self._key_input.setPlaceholderText("Paste your Gemini API key here...")
+        self._key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        # Pre-fill with existing key if any
+        existing = pdf_importer._load_api_key()
+        if existing:
+            self._key_input.setText(existing)
+        layout.addWidget(self._key_input)
+
+        self._show_key_chk = QCheckBox("Show key")
+        self._show_key_chk.stateChanged.connect(self._toggle_echo)
+        layout.addWidget(self._show_key_chk)
+
+        layout.addStretch()
+
+        btn_row = QHBoxLayout()
+        self._btn_save = QPushButton("Save")
+        self._btn_save.setDefault(True)
+        self._btn_save.clicked.connect(self._on_save)
+
+        btn_skip = QPushButton("Skip for now" if first_run else "Cancel")
+        btn_skip.clicked.connect(self.reject)
+
+        btn_row.addStretch()
+        btn_row.addWidget(btn_skip)
+        btn_row.addWidget(self._btn_save)
+        layout.addLayout(btn_row)
+
+    def _toggle_echo(self):
+        if self._show_key_chk.isChecked():
+            self._key_input.setEchoMode(QLineEdit.EchoMode.Normal)
+        else:
+            self._key_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+    def _on_save(self):
+        key = self._key_input.text().strip()
+        if not key:
+            QMessageBox.warning(self, "No key entered", "Please paste your API key, or click Skip.")
+            return
+        pdf_importer.save_api_key(key)
+        QMessageBox.information(
+            self, "Key saved",
+            "Your Gemini API key has been saved.\n\n"
+            "You can update it anytime via Edit \u2192 Gemini API Key."
+        )
+        self.accept()
+
+
+# ---------------------------------------------------------------------------
 # Actions menu button embedded in each table row
 # ---------------------------------------------------------------------------
 
@@ -384,6 +471,11 @@ class MainWindow(QMainWindow):
         settings_action.setToolTip("Manage AI Prompt Builder actions")
         settings_action.triggered.connect(self._open_settings)
         edit_menu.addAction(settings_action)
+
+        key_action = QAction("\U0001f511 Gemini API Key\u2026", self)
+        key_action.setToolTip("Enter or update your Gemini API key")
+        key_action.triggered.connect(self._open_api_key_dialog)
+        edit_menu.addAction(key_action)
 
     def _build_toolbar(self) -> QWidget:
         bar = QWidget()
@@ -783,6 +875,17 @@ class MainWindow(QMainWindow):
         dlg.actions_changed.connect(self._place_row_buttons)
         dlg.exec()
 
+    def _open_api_key_dialog(self):
+        """Open the API key dialog (non-first-run mode)."""
+        dlg = ApiKeyDialog(parent=self, first_run=False)
+        dlg.exec()
+
+    def check_first_run(self):
+        """Show the API key dialog if no key is configured. Call after show()."""
+        if not pdf_importer._load_api_key():
+            dlg = ApiKeyDialog(parent=self, first_run=True)
+            dlg.exec()
+
     # ------------------------------------------------------------------
     # Detail pane
     # ------------------------------------------------------------------
@@ -985,4 +1088,5 @@ def run():
     app.setStyle("Fusion")
     window = MainWindow()
     window.show()
+    window.check_first_run()
     sys.exit(app.exec())

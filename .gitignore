@@ -8,6 +8,8 @@ github_setup.ps1
 *.db
 *.sqlite
 *.sqlite3
+# Exception: config.db is the seed file that ships with the app
+!config.db
 
 # Python cache files
 __pycache__/
