@@ -47,4 +47,4 @@ Mid-career professionals targeting $100K+ SaaS roles who want a private, offline
 
 ### Out of Scope (v1)
 
-Resume tailoring, cover letter generation, status tracking, multi-user support, cloud sync.
+Resume tailoring, cover letter generation, status tracking, multi-user support, cloud sync. See *Backup to Excel PRD* for the export/backup feature.

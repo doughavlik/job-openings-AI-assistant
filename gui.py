@@ -31,6 +31,7 @@ import db
 import pdf_importer
 import config_db
 import prompt_builder
+import backup_excel
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +467,13 @@ class MainWindow(QMainWindow):
 
     def _build_menu_bar(self):
         menu_bar = self.menuBar()
+
+        file_menu = menu_bar.addMenu("File")
+        export_action = QAction("Export Backup to Excel\u2026", self)
+        export_action.setToolTip("Export all data to an Excel file")
+        export_action.triggered.connect(self._on_export_backup)
+        file_menu.addAction(export_action)
+
         edit_menu = menu_bar.addMenu("Edit")
         settings_action = QAction("\u2699 Settings\u2026", self)
         settings_action.setToolTip("Manage AI Prompt Builder actions")
@@ -867,6 +875,25 @@ class MainWindow(QMainWindow):
         """Open the Prompt Builder dialog for the given job and action."""
         dlg = PromptBuilderDialog(job_id, action, parent=self)
         dlg.exec()
+
+    def _on_export_backup(self):
+        """Export all data to an Excel backup file."""
+        from datetime import date
+        default_name = f"JobOpeningsTracker_Backup_{date.today().isoformat()}.xlsx"
+        docs = Path.home() / "Documents"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export Backup to Excel",
+            str(docs / default_name),
+            "Excel Files (*.xlsx)",
+        )
+        if not path:
+            return
+        try:
+            backup_excel.export_backup(path)
+            QMessageBox.information(self, "Backup Complete",
+                                    f"Backup saved to:\n{path}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Backup Failed", str(exc))
 
     def _open_settings(self):
         """Open the Settings window for managing AI Prompt Builder actions."""

@@ -53,5 +53,11 @@ Opens when a row is selected. Contains three tabs:
 
 ---
 
+### Menu Bar
+
+**File** menu contains **Export Backup to Excel...** (see *Backup to Excel PRD*). **Edit** menu contains **Settings** and **Gemini API Key**.
+
+---
+
 ### Tech
 `PySide6`

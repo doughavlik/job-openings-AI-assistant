@@ -48,6 +48,8 @@ a = Analysis(
         'pdfminer.pdfparser',
         'pdfminer.pdftypes',
         'pdfminer.utils',
+        # openpyxl for Excel backup export
+        'openpyxl',
     ],
     hookspath=[],
     hooksconfig={},

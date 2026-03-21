@@ -40,6 +40,7 @@ def _check_dependencies() -> list[str]:
         ("pdfplumber", "pdfplumber"),
         ("google-genai", "google.genai"),
         ("PySide6", "PySide6"),
+        ("openpyxl", "openpyxl"),
     ]:
         try:
             __import__(import_name)

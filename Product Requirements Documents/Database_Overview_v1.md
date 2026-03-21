@@ -7,7 +7,7 @@
 
 ### What Kind of Database Is This?
 
-The app uses **SQLite** — a lightweight database stored as a single file on your computer (`job_openings.db`, in the same folder as the app). There is no server, no account, and no internet connection required. You can back it up simply by copying that file.
+The app uses **SQLite** — a lightweight database stored as a single file on your computer. No server, no account, no internet required. Back up by copying the file, or use **File > Export Backup to Excel** to save all data to a single `.xlsx` file (see *Backup to Excel PRD*).
 
 ---
 
@@ -66,12 +66,10 @@ Each row connects one person to one job opening. This table has no fields of its
 
 ### A Note on Markdown
 
-`teal_import_raw` and `job_description_contents` store text in **Markdown** — a plain-text convention using symbols like `###` for headings and `-` for bullets. The app displays and edits it as plain text.
+`teal_import_raw` and `job_description_contents` store text in **Markdown**. The app displays and edits it as plain text.
 
 ---
 
 ### File Location
 
-```
-C:\Users\dough\OneDrive\Documents\work streams\job openings app - 81972\job_openings.db
-```
+`job_openings.db` is stored in the user data folder (`%LOCALAPPDATA%\JobOpeningsTracker` on Windows). `config.db` lives in the same folder (copied from the app directory on first run).
