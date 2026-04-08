@@ -644,7 +644,7 @@ class MainWindow(QMainWindow):
 
         def on_edit():
             text.setReadOnly(False)
-            text.setStyleSheet("background: #fffde7;")
+            text.setStyleSheet("background: #fffde7; color: #000000;")
             edit_btn.setVisible(False)
             save_btn.setVisible(True)
             cancel_btn.setVisible(True)
